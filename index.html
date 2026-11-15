@@ -137,7 +137,7 @@ document.getElementById('contactForm').addEventListener('submit',e=>{e.preventDe
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-import { getFirestore, collection, doc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBtkmWWwvBefH0EMJ_mIP_Xjy-RmgGbOUA",
@@ -242,9 +242,9 @@ function observeReveals() {
   document.querySelectorAll(".reveal:not(.visible)").forEach(el=>obs.observe(el));
 }
 onSnapshot(doc(db,"settings","public"),snap=>{if(snap.exists()) applySettings(snap.data());},err=>console.error("Settings listener:",err));
-onSnapshot(collection(db,"properties"),snap=>{const rows=snap.docs.map(d=>({id:d.id,...d.data()})); if(rows.length) renderProperties(rows);},err=>console.error("Properties listener:",err));
-onSnapshot(collection(db,"team"),snap=>{const rows=snap.docs.map(d=>({id:d.id,...d.data()})); if(rows.length) renderTeam(rows);},err=>console.error("Team listener:",err));
-onSnapshot(collection(db,"services"),snap=>{const rows=snap.docs.map(d=>({id:d.id,...d.data()})); if(rows.length) renderServices(rows);},err=>console.error("Services listener:",err));
+onSnapshot(query(collection(db,"properties"),where("published","==",true)),snap=>{const rows=snap.docs.map(d=>({id:d.id,...d.data()})); renderProperties(rows);},err=>console.error("Properties listener:",err));
+onSnapshot(query(collection(db,"team"),where("active","==",true)),snap=>{const rows=snap.docs.map(d=>({id:d.id,...d.data()})); renderTeam(rows);},err=>console.error("Team listener:",err));
+onSnapshot(query(collection(db,"services"),where("active","==",true)),snap=>{const rows=snap.docs.map(d=>({id:d.id,...d.data()})); renderServices(rows);},err=>console.error("Services listener:",err));
 
 const enquiryForm=$("#contactForm");
 if(enquiryForm) enquiryForm.addEventListener("submit", async e=>{
@@ -252,12 +252,12 @@ if(enquiryForm) enquiryForm.addEventListener("submit", async e=>{
   const button=enquiryForm.querySelector('button[type="submit"]');
   const old=button?.textContent;
   if(button){button.disabled=true;button.textContent="Sending enquiry...";}
+  const interest=$("#interest")?.value||"";
+  const userMessage=$("#message")?.value.trim()||"";
   const data={
     name:$("#name")?.value.trim()||"",
     phone:$("#phone")?.value.trim()||"",
-    interest:$("#interest")?.value||"",
-    message:$("#message")?.value.trim()||"",
-    source:"website",
+    message:[interest,userMessage].filter(Boolean).join(" — "),
     createdAt:serverTimestamp()
   };
   try {
